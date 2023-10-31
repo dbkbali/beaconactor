@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
+	server "beacon-actor/api"
 	"beacon-actor/config"
-	"beacon-actor/server"
+	"beacon-actor/datastore/postgresql"
 
-	"beacon-actor/datastore"
-
-	eth2client "github.com/attestantio/go-eth2-client"
-	"github.com/attestantio/go-eth2-client/http"
+	eth2client "github.com/dbkbali/go-eth2-client"
+	"github.com/dbkbali/go-eth2-client/http"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 )
 
-var db *datastore.DB
+var db *postgresql.DB
 var eth2HttpClient *eth2client.Service
 
 func init() {
@@ -33,7 +33,7 @@ func main() {
 	// startup database
 	ctx := context.Background()
 	var err error
-	db, err = datastore.NewDb(ctx, config.DatabaseUrl)
+	db, err = postgresql.NewDb(ctx, config.DatabaseUrl)
 	if err != nil {
 		fmt.Println("unable to connect to database: %w", err)
 		os.Exit(1)
@@ -52,7 +52,9 @@ func main() {
 
 func connectToBeaconNode(beaconNodeUrl string) (client eth2client.Service) {
 	fmt.Printf("connecting to beacon node at %s\n", beaconNodeUrl)
+
 	client, err := http.New(context.Background(),
+		http.WithTimeout(15*time.Second),
 		http.WithAddress(beaconNodeUrl),
 		http.WithLogLevel(zerolog.DebugLevel),
 	)
